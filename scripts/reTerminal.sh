@@ -9,7 +9,7 @@ marker="0.0.0"
 
 FORCE_KERNEL="1.20210303-1"
 
-uname_r=$(uname -r)
+KERNEL_VERSION=`uname -r`
 arch_r=$(dpkg --print-architecture)
 
 # Common path
@@ -27,29 +27,9 @@ BLACKLIST_PATH=/etc/modprobe.d/raspi-blacklist.conf
 [ -f /boot/firmware/cmdline.txt ] && CLI_PATH=/boot/firmware/cmdline.txt
 [ -d /boot/firmware/overlays ] && OVERLAY_DIR=/boot/firmware/overlays
 
-_VER_RUN=""
-function get_kernel_version() {
-  local ZIMAGE IMG_OFFSET
-
-  [ -z "$_VER_RUN" ] && {
-    ZIMAGE=/boot/kernel7l.img
-    if [ $arch_r == "arm64" ]; then
-      ZIMAGE=/boot/kernel8.img
-    fi
-    [ -f /boot/firmware/vmlinuz ] && ZIMAGE=/boot/firmware/vmlinuz
-    [ -f /boot/vmlinuz ] && ZIMAGE=/boot/vmlinuz
-    [ -f /vmlinuz ] && ZIMAGE=/vmlinuz
-    IMG_OFFSET=$(LC_ALL=C grep -abo $'\x1f\x8b\x08\x00' $ZIMAGE | head -n 1 | cut -d ':' -f 1)
-    _VER_RUN=$(dd if=$ZIMAGE obs=64K ibs=4 skip=$(( IMG_OFFSET / 4)) 2>/dev/null | zcat | grep -a -m1 "Linux version" | strings | awk '{ print $3; }' | grep "[0-9]")
-  }
-  echo "$_VER_RUN"
-  
-  return 0
-}
-
 # Check headers
 function check_kernel_headers() {
-  VER_RUN=$(get_kernel_version)
+  VER_RUN=${KERNEL_VERSION}
 
   if [ -d "/lib/modules/${VER_RUN}/build" ]; then
     echo KBUILD: "/lib/modules/${VER_RUN}/build"
@@ -130,7 +110,7 @@ function install_modules {
 
   # locate currently installed kernels (may be different to running kernel if
   # it's just been updated)
-  kernel=$(get_kernel_version)
+  kernel=${KERNEL_VERSION}
 
   for mod
   do
@@ -567,13 +547,3 @@ if [[ $r -eq 0 ]]; then
 fi
 
 install
-
-
-
-
-
-
-
-
-
-
