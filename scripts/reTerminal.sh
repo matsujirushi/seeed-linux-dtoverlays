@@ -82,13 +82,15 @@ function install_kernel() {
   local _url _prefix
 
   # Instead of retrieving the lastest kernel & headers
-  [ "X$FORCE_KERNEL" == "X" ] && {
-    # Raspbian kernel packages
-    apt-get -y --force-yes install raspberrypi-kernel-headers raspberrypi-kernel || {
-      # Ubuntu kernel packages
-      apt-get -y install linux-raspi linux-headers-raspi linux-image-raspi
-    }
-  } || {
+  if [ "X$FORCE_KERNEL" == "X" ]; then
+    if [ "X$keep_kernel" == "X" ]; then
+      # Raspbian kernel packages
+      apt-get -y --force-yes install raspberrypi-kernel-headers raspberrypi-kernel || {
+        # Ubuntu kernel packages
+        apt-get -y install linux-raspi linux-headers-raspi linux-image-raspi
+      }
+    fi
+  else
     # We would like to a fixed version
     KERN_NAME=raspberrypi-kernel_${FORCE_KERNEL}_${arch_r}.deb
     HDR_NAME=raspberrypi-kernel-headers_${FORCE_KERNEL}_${arch_r}.deb
@@ -105,7 +107,7 @@ function install_kernel() {
       echo "Error: Install header failed"
       exit 2
     fi
-  }
+  fi
 }
 
 # Install module
