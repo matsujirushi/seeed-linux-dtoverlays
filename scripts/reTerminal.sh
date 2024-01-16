@@ -51,14 +51,17 @@ function check_kernel_headers() {
 }
 
 function download_install_debpkg() {
-  local prefix name r pkg status _name
+  local prefix name pkg status _name_package _name_version _name_arch _name r
   prefix=$1
   name=$2
   pkg=${name%%_*}
 
   status=$(dpkg -l $pkg | tail -1)
-  _name=$(  echo "$status" | awk '{ printf "%s_%s_%s", $2, $3, $4; }')
-  status=$(echo "$status" | awk '{ printf "%s", $1; }')
+  _name_package=$(echo ${status} | awk '{ print $2 }')
+  _name_version=$(echo ${status} | awk '{ print $3 }')
+  _name_arch=$(echo ${status} | awk '{ print $4 }')
+  _name=${_name_package}_${_name_version##*:}_${_name_arch}
+  status=$(echo ${status} | awk '{ print $1 }')
 
   if [ "X$status" == "Xii" -a "X${name%.deb}" == "X$_name" ]; then
     echo "debian package $name already installed."
@@ -92,12 +95,16 @@ function install_kernel() {
     _url=$(apt-get download --print-uris raspberrypi-kernel | sed -nre "s/'([^']+)'.*$/\1/g;p")
     _prefix=$(echo $_url | sed -nre 's/^(.*)raspberrypi-kernel_.*$/\1/g;p')
 
-    download_install_debpkg "$_prefix" "$KERN_NAME" && {
-      download_install_debpkg "$_prefix" "$HDR_NAME"
-    } || {
-      echo "Error: Install kernel or header failed"
+    if [ "X$keep_kernel" == "X" ]; then
+      if ! download_install_debpkg "$_prefix" "$KERN_NAME"; then
+        echo "Error: Install kernel failed"
+        exit 2
+      fi
+    fi
+    if ! download_install_debpkg "$_prefix" "$HDR_NAME"; then
+      echo "Error: Install header failed"
       exit 2
-    }
+    fi
   }
 }
 
@@ -526,6 +533,7 @@ fi
 
 if [ "X$keep_kernel" != "X" ]; then
   FORCE_KERNEL=$(dpkg -s raspberrypi-kernel | awk '/^Version:/{printf "%s\n",$2;}')
+  FORCE_KERNEL=${FORCE_KERNEL##*:}
   echo -e "\n### Keep current system kernel not to change"
 elif [ "X$compat_kernel" != "X" ]; then
   echo -e "\n### Will compile with a compatible kernel..."
