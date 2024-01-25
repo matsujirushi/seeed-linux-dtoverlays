@@ -29,6 +29,7 @@ static const struct drm_display_mode ili9881d_modes = {
 
 static int ili9881d_get_modes(struct drm_panel *panel, struct drm_connector *connector)
 {
+	static const u32 bus_format = MEDIA_BUS_FMT_RGB888_1X24;
 	struct drm_display_mode *mode;
 
 	// DBG_PRINT("Get ILI9881D mode");
@@ -43,9 +44,14 @@ static int ili9881d_get_modes(struct drm_panel *panel, struct drm_connector *con
 	mode->type = DRM_MODE_TYPE_DRIVER | DRM_MODE_TYPE_PREFERRED;
 	drm_mode_set_name(mode);
 
+	drm_mode_probed_add(connector, mode);
+
+	DBG_FUNC("width_mm = %d", mode->width_mm);
+	DBG_FUNC("height_mm = %d", mode->height_mm);
+	connector->display_info.bpc = 8;
 	connector->display_info.width_mm = mode->width_mm;
 	connector->display_info.height_mm = mode->height_mm;
-	drm_mode_probed_add(connector, mode);
+	drm_display_info_set_bus_formats(&connector->display_info, &bus_format, 1);
 
 	return 1;
 }
