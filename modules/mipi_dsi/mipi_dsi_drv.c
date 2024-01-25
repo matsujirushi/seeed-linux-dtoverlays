@@ -11,6 +11,8 @@
 #include "mipi_dsi.h"
 #include <linux/version.h>
 
+extern enum drm_panel_orientation panel_orientation;
+
 /*static */int i2c_md_read(struct i2c_mipi_dsi *md, u8 reg, u8 *buf, int len)
 {
 	struct i2c_client *client = md->i2c;
@@ -265,12 +267,18 @@ static int panel_get_modes(struct drm_panel *panel, struct drm_connector *connec
 	return ret;
 }
 
+static enum drm_panel_orientation panel_get_orientation(struct drm_panel *panel)
+{
+	return panel_orientation;
+}
+
 static const struct drm_panel_funcs panel_funcs = {
 	.prepare = panel_prepare,
 	.unprepare = panel_unprepare,
 	.enable = panel_enable,
 	.disable = panel_disable,
 	.get_modes = panel_get_modes,
+	// .get_orientation = panel_get_orientation,
 };
 
 
@@ -343,6 +351,11 @@ static int i2c_md_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 	i2c_set_clientdata(i2c, md);
 	mutex_init(&md->mutex);
 	md->i2c = i2c;
+	ret = of_drm_get_panel_orientation(dev->of_node, &panel_orientation);
+	if (ret) {
+		dev_err(dev, "%pOF: failed to get orientation %d\n", dev->of_node, ret);
+		return ret;
+	}
 	md->panel_data = (struct panel_data *)of_device_get_match_data(dev);
 	if (!md->panel_data) {
 		dev_err(dev, "No valid panel data.\n");
