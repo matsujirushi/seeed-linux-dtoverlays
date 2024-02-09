@@ -51,6 +51,7 @@
 	fragment@3 {
 		target = <&mcp23008>;
 		mcp23008_irq: __overlay__ {
+			#address-cells=<0>;
 			#interrupt-cells=<2>;
 			interrupt-parent = <&gpio>;
 			interrupts = <6 2>; /* IRQ_TYPE_EDGE_FALLING */
