@@ -1,7 +1,6 @@
-# The reTerminal driver for Raspberry Pi OS
+# Renewed reTerminal driver for Raspberry Pi OS
 
-> There are experimental drivers with revamped scripts.
-> * [Renewed reTerminal driver for Raspberry Pi OS](/doc/reTerminal_RasPiOS.md)
+**This is currently an experimental script.**
 
 ## Support Platforms
 
@@ -28,26 +27,36 @@
 
    ```
    echo arm_64bit=0 | sudo tee -a /boot/config.txt
-   sudo reboot
+   sudo poweroff
    ```
 
-2. Download the driver.
+2. When buster, upgrade the kernel.
+
+   ```
+   sudo apt --only-upgrade install raspberrypi-kernel
+   sudo poweroff
+   ```
+
+3. Download the driver.
 
    ```
    git clone --depth 1 https://github.com/matsujirushi/seeed-linux-dtoverlays
    cd seeed-linux-dtoverlays
    ```
 
-3. Install the driver.
+4. Install the driver.
 
    ```
-   sudo ./scripts/reTerminal.sh --keep-kernel
+   sudo ./scripts/reTerminal2.sh
    ```
 
-4. Reboot.
+5. When the message "Execute command(s) below:" is displayed, execute the specified command.
+
+6. Reboot.
 
    ```
    sudo reboot
    ```
 
 ## Known Issues
+
