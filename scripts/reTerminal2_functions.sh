@@ -16,6 +16,14 @@ ui_check_prerequisites()
       esac
       ;;
     Ubuntu)
+      case $DISTRO_CODE in
+        jammy)
+          ;;
+        *)
+          echo 'ERROR: Unsupported distributor. '"$DISTRO_ID $DISTRO_CODE"
+          exit 1
+          ;;
+      esac
       ;;
     *)
       echo 'ERROR: Unsupported distributor. '"$DISTRO_ID"

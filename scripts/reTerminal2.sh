@@ -73,7 +73,6 @@ case $DISPLAY_MANAGER in
     USER_SESSION=${USER_SESSION#*=}
     ;;
   gdm3)
-    echo "GDM3"
     ;;
   *)
     echo 'ERROR: Unsupported display manager. '"$DISPLAY_MANAGER"
@@ -134,8 +133,11 @@ echo '# bootfs:                       '"$BOOTFS_PATH"
 echo '# kernel package name:          '"$KERNEL_PACKAGE_NAME"
 echo '# kernel headers package name:  '"$KERNEL_HEADERS_PACKAGE_NAME"
 echo '# display manager:              '"$DISPLAY_MANAGER"
-echo '# greeter session:              '"$GREETER_SESSION"
-echo '# user session:                 '"$USER_SESSION"
+[ "$DISPLAY_MANAGER" = 'lightdm' ] &&
+{
+  echo '# greeter session:              '"$GREETER_SESSION"
+  echo '# user session:                 '"$USER_SESSION"
+}
 
 echo
 echo '### Options'
@@ -204,6 +206,11 @@ case $DISTRO_ID in
     esac
     ;;
   Ubuntu)
+    case $DISTRO_CODE in
+      jammy)
+        set_config_value "$CONFIG_TXT" 'dtoverlay' 'reTerminal,tp_rotate=1'
+        ;;
+    esac
     ;;
 esac
 set_config_value "$CONFIG_TXT" 'dtparam' 'ant2'
@@ -249,6 +256,21 @@ case $DISTRO_ID in
     esac
     ;;
   Ubuntu)
+    case $DISTRO_CODE in
+      jammy)
+        echo "# cp $RESOURCE_PATH/monitors.xml /var/lib/gdm3/.config/monitors.xml"
+        cp "$RESOURCE_PATH/monitors.xml" /var/lib/gdm3/.config/monitors.xml
+
+        for file in /home/*
+        do
+          [ -e "$file/.config/monitors.xml" ] ||
+          {
+            echo "# cp $RESOURCE_PATH/monitors.xml $file/.config/monitors.xml"
+            cp "$RESOURCE_PATH/monitors.xml" "$file/.config/monitors.xml"
+          }
+        done
+        ;;
+    esac
     ;;
 esac
 
