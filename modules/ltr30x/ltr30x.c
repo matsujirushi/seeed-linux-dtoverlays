@@ -1596,6 +1596,12 @@ static const struct acpi_device_id ltr_acpi_match[] = {
 };
 MODULE_DEVICE_TABLE(acpi, ltr_acpi_match);
 
+static const struct of_device_id ltr_of_match[] = {
+	{ .compatible = "liteon,ltr303" },
+	{ },
+};
+MODULE_DEVICE_TABLE(of, ltr_of_match);
+
 static const struct i2c_device_id ltr501_id[] = {
 	{ "ltr501", ltr501},
 	{ "ltr559", ltr559},
@@ -1610,6 +1616,7 @@ static struct i2c_driver ltr501_driver = {
 		.name   = LTR501_DRV_NAME,
 		.pm	= &ltr501_pm_ops,
 		.acpi_match_table = ACPI_PTR(ltr_acpi_match),
+		.of_match_table = of_match_ptr(ltr_of_match),
 	},
 	.probe  = ltr501_probe,
 	.remove	= ltr501_remove,
