@@ -30,7 +30,7 @@ The drivers for other devices are included because they are cloned and modified 
   * ~~ubuntu-20.04.4-preinstalled-server-arm64+raspi.img.xz~~ (*2)
   * ubuntu-22.04.3-preinstalled-server-arm64+raspi.img.xz
 
-*1) The bit numbers of user-space and Kernel are different. Requires cross-compilation.
+*1) The bit numbers of user-space and Kernel are different. Requires cross-compilation.  
 *2) Not supported before Kernel 5.10. (See [here](https://github.com/raspberrypi/linux/issues/2521#issuecomment-741738760).)
 
 ## Install script
