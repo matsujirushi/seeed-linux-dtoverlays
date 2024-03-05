@@ -258,6 +258,9 @@ case $DISTRO_ID in
   Ubuntu)
     case $DISTRO_CODE in
       jammy)
+        # Disable automatic rotation
+        POST_COMMANDS="$POST_COMMANDS"$'\n$ gsettings set org.gnome.settings-daemon.peripherals.touchscreen orientation-lock true'
+
         echo "# cp $RESOURCE_PATH/monitors.xml /var/lib/gdm3/.config/monitors.xml"
         cp "$RESOURCE_PATH/monitors.xml" /var/lib/gdm3/.config/monitors.xml
 
