@@ -21,17 +21,21 @@ The drivers for other devices are included because they are cloned and modified 
   * 2023-10-10-raspios-bookworm-armhf.img.xz arm_64bit=0
   * ~~2023-12-05-raspios-bookworm-armhf.img.xz (arm_64bit=1)~~ (*1)
   * 2023-12-05-raspios-bookworm-armhf.img.xz arm_64bit=0
+  * ~~2024-03-12-raspios-bookworm-armhf.img.xz (arm_64bit=1)~~ (*1)
+  * 2024-03-12-raspios-bookworm-armhf.img.xz arm_64bit=0 (*3)
 * Raspberry Pi OS 64-bit
   * 2021-05-07-raspios-buster-arm64.zip
   * 2023-05-03-raspios-bullseye-arm64.img.xz
   * 2023-10-10-raspios-bookworm-arm64.img.xz
   * 2023-12-05-raspios-bookworm-arm64.img.xz
+  * 2024-03-12-raspios-bookworm-arm64.img.xz (*3)
 * Ubuntu OS 64-bit
   * ~~ubuntu-20.04.4-preinstalled-server-arm64+raspi.img.xz~~ (*2)
   * ubuntu-22.04.3-preinstalled-server-arm64+raspi.img.xz
 
 *1) The bit numbers of user-space and Kernel are different. Requires cross-compilation.  
-*2) Not supported before Kernel 5.10. (See [here](https://github.com/raspberrypi/linux/issues/2521#issuecomment-741738760).)
+*2) Not supported before Kernel 5.10. (See [here](https://github.com/raspberrypi/linux/issues/2521#issuecomment-741738760).)  
+*3) Currently in the vnext branch.
 
 ## Install script
 
@@ -48,6 +52,16 @@ The drivers for other devices are included because they are cloned and modified 
    git clone --depth 1 https://github.com/matsujirushi/seeed-linux-dtoverlays
    cd seeed-linux-dtoverlays
    ```
+
+   > The latest bookworm support is currently in the vnext branch.
+   > 
+   > * 2024-03-12-raspios-bookworm-arm64.img.xz
+   > * 2024-03-12-raspios-bookworm-armhf.img.xz arm_64bit=0
+   > 
+   > ```
+   > git clone -b vnext --depth 1 https://github.com/matsujirushi/seeed-linux-dtoverlays
+   > ```
+
 
 3. Install the driver.
 
