@@ -9,7 +9,7 @@ marker="0.0.0"
 
 FORCE_KERNEL="1.20210303-1"
 
-KERNEL_VERSION=`uname -r`
+uname_r=$(uname -r)
 arch_r=$(dpkg --print-architecture)
 
 # Common path
@@ -22,14 +22,48 @@ CFG_PATH=/boot/config.txt
 CLI_PATH=/boot/cmdline.txt
 OVERLAY_DIR=/boot/overlays
 BLACKLIST_PATH=/etc/modprobe.d/raspi-blacklist.conf
-# Ubuntu
+# Ubuntu or Raspbian bookworm and later
 [ -f /boot/firmware/config.txt ] && CFG_PATH=/boot/firmware/config.txt
 [ -f /boot/firmware/cmdline.txt ] && CLI_PATH=/boot/firmware/cmdline.txt
 [ -d /boot/firmware/overlays ] && OVERLAY_DIR=/boot/firmware/overlays
 
+# DISTRO INFO
+DISTRO_ID=$(lsb_release -is)
+DISTRO_CODE=$(lsb_release -cs)
+BOOKWORM_NUM=12
+DEBIAN_VER=`cat /etc/debian_version`
+DEBIAN_NUM=$(echo "$DEBIAN_VER" | awk -F'.' '{print $1}')
+
+_VER_RUN=""
+function get_kernel_version() {
+  local ZIMAGE IMG_OFFSET
+
+  if [ -z "$_VER_RUN" ]; then
+    if [ $DEBIAN_NUM -lt $BOOKWORM_NUM ]; then
+      ZIMAGE=/boot/kernel7l.img
+      if [ $arch_r == "arm64" ]; then
+        ZIMAGE=/boot/kernel8.img
+      fi
+    else
+      ZIMAGE=/boot/firmware/kernel7l.img
+      if [ $arch_r == "arm64" ]; then
+        ZIMAGE=/boot/firmware/kernel8.img
+      fi
+    fi
+  fi
+
+  [ -f /boot/firmware/vmlinuz ] && ZIMAGE=/boot/firmware/vmlinuz
+  IMG_OFFSET=$(LC_ALL=C grep -abo $'\x1f\x8b\x08\x00' $ZIMAGE | head -n 1 | cut -d ':' -f 1)
+  _VER_RUN=$(dd if=$ZIMAGE obs=64K ibs=4 skip=$(( IMG_OFFSET / 4)) 2>/dev/null | zcat | grep -a -m1 "Linux version" | strings | awk '{ print $3; }' | grep "[0-9]")
+
+  echo "$_VER_RUN"
+  
+  return 0
+}
+
 # Check headers
 function check_kernel_headers() {
-  VER_RUN=${KERNEL_VERSION}
+  VER_RUN=$(get_kernel_version)
 
   if [ -d "/lib/modules/${VER_RUN}/build" ]; then
     echo KBUILD: "/lib/modules/${VER_RUN}/build"
@@ -47,21 +81,32 @@ function check_kernel_headers() {
     exit 1;
   fi
 
-  apt-get -y install raspberrypi-kernel-headers
+  case $DISTRO_ID in
+    Raspbian|Debian)
+      case $DISTRO_CODE in
+        buster|bullseye)
+          apt-get -y --force-yes install raspberrypi-kernel-headers
+          ;;
+        bookworm)
+          apt-get -y --force-yes linux-headers-rpi-${VER_RUN##*-}
+          ;;
+      esac
+      ;;
+    Ubuntu)
+      apt-get -y install linux-headers-raspi
+      ;;
+  esac
 }
 
 function download_install_debpkg() {
-  local prefix name pkg status _name_package _name_version _name_arch _name r
+  local prefix name r pkg status _name
   prefix=$1
   name=$2
   pkg=${name%%_*}
 
   status=$(dpkg -l $pkg | tail -1)
-  _name_package=$(echo ${status} | awk '{ print $2 }')
-  _name_version=$(echo ${status} | awk '{ print $3 }')
-  _name_arch=$(echo ${status} | awk '{ print $4 }')
-  _name=${_name_package}_${_name_version##*:}_${_name_arch}
-  status=$(echo ${status} | awk '{ print $1 }')
+  _name=$(  echo "$status" | awk '{ printf "%s_%s_%s", $2, $3, $4; }')
+  status=$(echo "$status" | awk '{ printf "%s", $1; }')
 
   if [ "X$status" == "Xii" -a "X${name%.deb}" == "X$_name" ]; then
     echo "debian package $name already installed."
@@ -80,34 +125,39 @@ function download_install_debpkg() {
 
 function install_kernel() {
   local _url _prefix
+  local ker_ver=$(get_kernel_version)
 
   # Instead of retrieving the lastest kernel & headers
-  if [ "X$FORCE_KERNEL" == "X" ]; then
-    if [ "X$keep_kernel" == "X" ]; then
-      # Raspbian kernel packages
-      apt-get -y --force-yes install raspberrypi-kernel-headers raspberrypi-kernel || {
-        # Ubuntu kernel packages
+  [ "X$FORCE_KERNEL" == "X" ] && {
+    case $DISTRO_ID in
+      Raspbian|Debian)
+        case $DISTRO_CODE in
+          buster|bullseye)
+            apt-get -y --force-yes install raspberrypi-kernel-headers raspberrypi-kernel
+            ;;
+          bookworm)
+            apt-get -y --force-yes install linux-image-rpi-${ker_ver##*-} linux-headers-rpi-${ker_ver##*-}
+            ;;
+        esac
+        ;;
+      Ubuntu)
         apt-get -y install linux-raspi linux-headers-raspi linux-image-raspi
-      }
-    fi
-  else
+        ;;
+    esac
+  } || {
     # We would like to a fixed version
     KERN_NAME=raspberrypi-kernel_${FORCE_KERNEL}_${arch_r}.deb
     HDR_NAME=raspberrypi-kernel-headers_${FORCE_KERNEL}_${arch_r}.deb
     _url=$(apt-get download --print-uris raspberrypi-kernel | sed -nre "s/'([^']+)'.*$/\1/g;p")
     _prefix=$(echo $_url | sed -nre 's/^(.*)raspberrypi-kernel_.*$/\1/g;p')
 
-    if [ "X$keep_kernel" == "X" ]; then
-      if ! download_install_debpkg "$_prefix" "$KERN_NAME"; then
-        echo "Error: Install kernel failed"
-        exit 2
-      fi
-    fi
-    if ! download_install_debpkg "$_prefix" "$HDR_NAME"; then
-      echo "Error: Install header failed"
+    download_install_debpkg "$_prefix" "$KERN_NAME" && {
+      download_install_debpkg "$_prefix" "$HDR_NAME"
+    } || {
+      echo "Error: Install kernel or header failed"
       exit 2
-    fi
-  fi
+    }
+  }
 }
 
 # Install module
@@ -119,7 +169,7 @@ function install_modules {
 
   # locate currently installed kernels (may be different to running kernel if
   # it's just been updated)
-  kernel=${KERNEL_VERSION}
+  kernel=$(get_kernel_version)
 
   for mod
   do
@@ -408,11 +458,58 @@ __EOF__
   exit 1
 }
 
+function setup_display {
+  case $DISTRO_ID in
+    Raspbian|Debian)
+      case $DISTRO_CODE in
+        buster)
+          if ! [[ -d "/usr/share/plymouth/themes/" && -d "/usr/share/X11/xorg.conf.d/" && -d "/etc/plymouth/" ]];
+           then
+             mkdir -p /usr/share/plymouth/themes/ \
+             /usr/share/X11/xorg.conf.d/ \
+             /etc/plymouth/
+          fi
+          cp -rfv ${RES_PATH}/plymouth/seeed/ /usr/share/plymouth/themes/ || exit 1;
+          cp -fv ${RES_PATH}/10-disp.conf /usr/share/X11/xorg.conf.d/ || exit 1;
+          cp -fv ${RES_PATH}/plymouth/plymouthd.conf /etc/plymouth/ || exit 1;
+          ;;
+        bullseye)
+          for file in /home/*
+          do
+            cp -v "$RES_PATH/monitors.xml" "$file/.config/monitors.xml"
+          done
+          ;;
+        bookworm)
+          for file in /home/*
+          do
+            if [ -e "$file/.config/wayfire.ini" ]; then 
+              grep -q '^\[output\:DSI-1\]$' "$file/.config/wayfire.ini" ||
+              {
+                cat "$RES_PATH/wayfire.ini.diff" >> "$file/.config/wayfire.ini"
+              }
+            else
+              mkdir -p $file/.config/
+              cp -v $RES_PATH/wayfire.ini $file/.config/
+            fi 
+          done
+          ;;
+      esac
+      if [ "$device" = "reTerminal-plus" ]; then
+          cp -v $RES_PATH/98-touchscreen-cal.rules /etc/udev/rules.d/ 
+      fi
+      ;;
+  esac
+}
+
 function install {
   if [ "$device" = "reTerminal" ]; then
     install_modules mipi_dsi ltr30x lis3lv02d bq24179_charger
     install_overlay reTerminal
-    setup_overlay reTerminal tp_rotate=1
+    if [ $DEBIAN_NUM -lt $BOOKWORM_NUM ]; then
+      setup_overlay reTerminal tp_rotate=1
+    else
+      setup_overlay reTerminal tp_rotate=0
+    fi
   elif [ "$device" = "reTerminal-plus" ]; then
     install_modules ltr30x ili9881d ch34x rtc-pcf8563w
     install_overlay_DM
@@ -420,16 +517,9 @@ function install {
     # and we insmod a new driver for ch342f
     blacklist_driver cdc_acm
   fi
+
   # display
- if ! [[ -d "/usr/share/plymouth/themes/" && -d "/usr/share/X11/xorg.conf.d/" && -d "/etc/plymouth/" ]];
-  then
-    mkdir -p /usr/share/plymouth/themes/ \
-    /usr/share/X11/xorg.conf.d/ \
-    /etc/plymouth/
-  fi
-  cp -rfv ${RES_PATH}/plymouth/seeed/ /usr/share/plymouth/themes/ || exit 1;
-  cp -fv ${RES_PATH}/10-disp.conf /usr/share/X11/xorg.conf.d/ || exit 1;
-  cp -fv ${RES_PATH}/plymouth/plymouthd.conf /etc/plymouth/ || exit 1;
+  setup_display
 
   # audio
   if [ "$device" = "reTerminal" ]; then
@@ -467,6 +557,13 @@ function uninstall {
 if [[ $EUID -ne 0 ]]; then
   echo "This script must be run as root (use sudo)" 1>&2
   exit 1;
+fi
+
+# Check Debian version
+if [ $DEBIAN_NUM -lt $BOOKWORM_NUM ]; then
+    echo -e "\n### Current Debian version is bullseye or earlier"
+else
+    echo -e "\n### Current Debian version is bookworm or later"
 fi
 
 compat_kernel=
@@ -534,11 +631,22 @@ if [[ $r -eq 0 ]]; then
 fi
 
 if [ "X$keep_kernel" != "X" ]; then
-  FORCE_KERNEL=$(dpkg -s raspberrypi-kernel | awk '/^Version:/{printf "%s\n",$2;}')
-  FORCE_KERNEL=${FORCE_KERNEL##*:}
-  echo -e "\n### Keep current system kernel not to change"
+  if [ $DEBIAN_NUM -lt $BOOKWORM_NUM ]; then
+    FORCE_KERNEL=$(dpkg -s raspberrypi-kernel | awk '/^Version:/{printf "%s\n",$2;}')
+    echo -e "\n### Keep current system kernel not to change"
+  else
+    echo -e "\n### Don't support option --keep-kernel currently."
+    echo -e "\n### Pls remove --keep-kernel in your command."
+    exit 1
+  fi  
 elif [ "X$compat_kernel" != "X" ]; then
-  echo -e "\n### Will compile with a compatible kernel..."
+  if [ $DEBIAN_NUM -lt $BOOKWORM_NUM ]; then
+    echo -e "\n### Will compile with a compatible kernel..."
+  else
+    echo -e "\n### Don't support option --compat-kernel currently."
+    echo -e "\n### Pls remove --compat-kernel in your command."
+    exit 1
+  fi
 else
   FORCE_KERNEL=""
   echo -e "\n### Will compile with the latest kernel..."
@@ -546,6 +654,17 @@ fi
 [ "X$FORCE_KERNEL" != "X" ] && {
   echo -e "The kernel & headers use package version: $FORCE_KERNEL"
 }
+
+# Since raspbian OS bullseye(debian 11). In the 32bit raspbian OS,
+# the default kernel is 64bit while the userland is 32bit.
+# This make it hard to compile the dtoverlays for seeed.
+# So when the userland is 32bit, we force the kernel to 32bit too.
+echo -e "\n### Sync kernel and userland"
+if [ $arch_r != "arm64" ]; then
+  grep -q "^arm_64bit" ${CFG_PATH} && \
+  sed -i 's/arm_64bit=.*/arm_64bit=0/' ${CFG_PATH} || \
+  echo "arm_64bit=0" >> ${CFG_PATH} 
+fi
 
 echo -e "\n### Uninstall previous dkms module"
 uninstall
@@ -557,3 +676,13 @@ if [[ $r -eq 0 ]]; then
 fi
 
 install
+
+
+
+
+
+
+
+
+
+
