@@ -23,12 +23,15 @@ The drivers for other devices are included because they are cloned and modified 
   * 2023-12-05-raspios-bookworm-armhf.img.xz arm_64bit=0
   * ~~2024-03-12-raspios-bookworm-armhf.img.xz (arm_64bit=1)~~ (*1)
   * 2024-03-12-raspios-bookworm-armhf.img.xz arm_64bit=0 (*3)
+  * ~~2024-03-15-raspios-bookworm-armhf.img.xz (arm_64bit=1)~~ (*1)
+  * 2024-03-15-raspios-bookworm-armhf.img.xz arm_64bit=0 (*3)
 * Raspberry Pi OS 64-bit
   * 2021-05-07-raspios-buster-arm64.zip
   * 2023-05-03-raspios-bullseye-arm64.img.xz
   * 2023-10-10-raspios-bookworm-arm64.img.xz
   * 2023-12-05-raspios-bookworm-arm64.img.xz
   * 2024-03-12-raspios-bookworm-arm64.img.xz (*3)
+  * 2024-03-15-raspios-bookworm-arm64.img.xz (*3)
 * Ubuntu OS 64-bit
   * ~~ubuntu-20.04.4-preinstalled-server-arm64+raspi.img.xz~~ (*2)
   * ubuntu-22.04.3-preinstalled-server-arm64+raspi.img.xz
@@ -57,6 +60,8 @@ The drivers for other devices are included because they are cloned and modified 
    > 
    > * 2024-03-12-raspios-bookworm-arm64.img.xz
    > * 2024-03-12-raspios-bookworm-armhf.img.xz arm_64bit=0
+   > * 2024-03-15-raspios-bookworm-arm64.img.xz
+   > * 2024-03-15-raspios-bookworm-armhf.img.xz arm_64bit=0
    > 
    > ```
    > git clone -b vnext --depth 1 https://github.com/matsujirushi/seeed-linux-dtoverlays
