@@ -3,3 +3,6 @@
 mode = 720x1280@60000
 position = 0,0
 transform = 270
+
+[input-device:seeed-tp]
+output = DSI-1

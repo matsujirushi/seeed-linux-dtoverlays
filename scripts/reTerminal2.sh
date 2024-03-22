@@ -197,10 +197,10 @@ echo '### Set model-specific settings'
 case $DISTRO_ID in
   Raspbian|Debian)
     case $DISTRO_CODE in
-      buster|bookworm)
+      buster)
         set_config_value "$CONFIG_TXT" 'dtoverlay' 'reTerminal,tp_rotate=0'
         ;;
-      bullseye)
+      bullseye|bookworm)
         set_config_value "$CONFIG_TXT" 'dtoverlay' 'reTerminal,tp_rotate=1'
         ;;
     esac
