@@ -534,10 +534,7 @@ static int ili9881d_dsi_probe(struct mipi_dsi_device *dsi)
 		return ret;
 	}
 
-	ret = drm_panel_of_backlight(&ctx->panel);
-	if (ret)
-		return ret;
-
+	ctx->panel.backlight = devm_of_find_backlight(ctx->panel.dev);
 	drm_panel_add(&ctx->panel);
 
 	dsi->mode_flags = ctx->desc->mode_flags;
